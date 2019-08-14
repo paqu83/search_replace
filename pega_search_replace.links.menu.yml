@@ -1,0 +1,6 @@
+pega_search_replace.replace_form:
+  title: 'Replace string in content.'
+  route_name: pega_search_replace.main_form
+  description: 'Replace string in content.'
+  parent: system.admin_content
+  weight: 200

@@ -1,0 +1,6 @@
+name: pega_search_replace
+type: module
+description: Serach and replace string in the database
+core: 8.x
+package: Pega
+dependencies:
