@@ -6,9 +6,9 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\pega_search_replace\Services\SearchService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Url;
-use Drupal\Core\Link;
+
 
 /**
  * Class PegaSearchReplaceForm.
@@ -25,21 +25,21 @@ class PegaSearchReplaceForm extends FormBase {
   protected $entityTypeManager;
 
   /**
-   * The date formatter service.
+   * Search searvice used for providing search results.
    *
-   * @var \Drupal\Core\Datetime\DateFormatterInterface
+   * @var \Drupal\pega_search_replace\Services\SearchService
    */
-  protected $dateFormatter;
+  protected $searchService;
 
 
   /**
    * {@inheritdoc}
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager,
-                              DateFormatterInterface $date_formatter
+                              SearchService $searchService
   ) {
     $this->entityTypeManager = $entity_type_manager;
-    $this->dateFormatter = $date_formatter;
+    $this->searchService = $searchService;
   }
 
   /**
@@ -48,8 +48,8 @@ class PegaSearchReplaceForm extends FormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('date.formatter'),
-      $container->get('database')
+      $container->get('pega_search_replace.search.string')
+
     );
   }
 
@@ -118,7 +118,7 @@ class PegaSearchReplaceForm extends FormBase {
       '#validate' => ['::replaceValidate'],
     ];
 
-    $rows = $this->searchAStringPrepareRows($search_string);
+    $rows = $this->searchService->searchAStringPrepareRows($search_string);
 
     $form['table'] = [
       '#header' => [
@@ -141,67 +141,7 @@ class PegaSearchReplaceForm extends FormBase {
     return $form;
   }
 
-  /**
-   * Search for entities by string and prepare row data.
-   *
-   * @param $search_string
-   * @return array
-   */
-  private function searchAStringPrepareRows($search_string) {
-    $entitiesData = [];
-    $etitiesToSearch = ['node', 'paragraph'];
-    $rows = [];
-    if (empty($search_string)) {
-      return $rows;
-    }
 
-    foreach ($etitiesToSearch as $searchEntityName) {
-      $connection = \Drupal::database();
-      $likeString = $searchEntityName . '__field_%';
-      $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $likeString]);
-      $results = $query->fetchCol('table_name');
-      foreach ($results as $tableName) {
-        $fieldName = explode($searchEntityName . "__", $tableName);
-        $fieldName = end($fieldName);
-        $fieldName .= "_value";
-        $fieldExists = $connection->query("SHOW COLUMNS FROM $tableName LIKE :fieldName", [":fieldName" => $fieldName])->fetchAssoc();
-        if (!empty($fieldExists)) {
-          $sql = "SELECT `entity_id` FROM  $tableName WHERE $fieldName LIKE :search_string AND `langcode`='en' AND `deleted`=0 GROUP BY `entity_id` LIMIT 500";
-          $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%'])->fetchAll();
-          if (!empty($found)) {
-            foreach ($found as $foundItem) {
-              $entitiesData[] = [
-                'entity_id' => $foundItem->entity_id,
-                'field_name' => str_replace('_value', '', $fieldName),
-                'type' => $searchEntityName
-              ];
-            }
-          }
-        }
-      }
-    }
-
-    if (!empty($entitiesData)) {
-      $this->getAndGroupNodesFromParagraphs($entitiesData);
-      foreach ($entitiesData as $entityData) {
-
-        $url = Url::fromRoute('entity.node.edit_form', ['node' => $entityData['node']->id()]);
-        $link = Link::fromTextAndUrl('edit', $url);
-
-        $rows[$entityData['entity']->id() . "::" . $entityData['type'] . "::" . $entityData['field_name']] = [
-          $entityData['entity']->id(),
-          $entityData['type'],
-          $entityData['entity']->bundle(),
-          $entityData['node']->getTitle(),
-          $link->toString(),
-          $entityData['field_name'],
-          empty($entityData['tips']) ? "" : $entityData['tips']
-        ];
-      }
-    }
-
-    return $rows;
-  }
 
   /**
    * Validate replace string.
@@ -399,64 +339,6 @@ class PegaSearchReplaceForm extends FormBase {
     $form_state
       ->set('filters', NULL)
       ->setRebuild(TRUE);
-  }
-
-  /**
-   * Group nodes from paragraphs.
-   * @param $entitiesData
-   */
-  private function getAndGroupNodesFromParagraphs(&$entitiesData){
-    foreach ($entitiesData as $key => &$entityData) {
-      $this->tips = [];
-      $entityData['entity'] = $this->entityTypeManager->getStorage($entityData['type'])->load($entityData['entity_id']);
-      if ($entityData['type'] != 'paragraph') {
-        $entityData['node'] = $entityData['entity'];
-        continue;
-      }
-      $return = $this->checkBrokenParagraphRelation($entityData['entity']);
-      if ($return['flag']) {
-        $entityData['node'] = $return['entity'];
-      }
-      else {
-        unset($entitiesData[$key]);
-      }
-      if (count($this->tips) > 1) {
-        $entityData['tips'] = implode(" => ", array_reverse($this->tips));
-      }
-    }
-  }
-
-  /**
-   * Check if paragraph is not disattached from node.
-   *
-   * @param $entity
-   *   Paragraph entity.
-   * @return array[flag,entity]
-   */
-  private function checkBrokenParagraphRelation($entity) {
-    $flag = FALSE;
-    while ($entity->getEntityType()->get('id') != 'node') {
-      $this->tips[] = $entity->getType();
-      $flag = FALSE;
-      $parentEntity = $entity->getParentEntity();
-      if (!empty($entity->parent_field_name)) {
-        $parentFieldName = $entity->parent_field_name->getString();
-        if (!empty($parentEntity->{$parentFieldName})) {
-          $values = $parentEntity->{$parentFieldName}->getValue();
-          foreach ($values as $val) {
-            if ($val['target_id'] == $entity->id()) {
-              $flag = TRUE;
-              break;
-            }
-          }
-        }
-      }
-      if (!$flag) {
-        break;
-      }
-      $entity = $parentEntity;
-    }
-    return ['flag' => $flag, 'entity' => $entity];
   }
 
 }
