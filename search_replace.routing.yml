@@ -1,0 +1,7 @@
+search_replace.main_form:
+  path: '/admin/search_replace'
+  defaults:
+    _form: Drupal\search_replace\Form\SearchReplaceForm
+    _title: 'Search for a string in content.'
+  requirements:
+    _permission: 'administer content'

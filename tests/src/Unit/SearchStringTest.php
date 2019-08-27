@@ -1,15 +1,15 @@
 <?php
 
-namespace Drupal\pega_search_replace\Tests\Unit;
+namespace Drupal\search_replace\Tests\Unit;
 
 use Drupal\Tests\UnitTestCase;
-use Drupal\pega_search_replace\Services\SearchService;
+use Drupal\search_replace\Services\SearchService;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 
 /**
  * Class SearchStringTest. For testing Serach Service.
  *
- * @package Drupal\pega_search_replace\Tests\Unit
+ * @package Drupal\search_replace\Tests\Unit
  */
 class SearchStringTest extends UnitTestCase {
 
@@ -52,7 +52,7 @@ class SearchStringTest extends UnitTestCase {
     $searchService = new SearchService($this->entityTypeManager, $this->database);
 
     \Drupal::setContainer($container);
-    $container->set('pega_search_replace.search.string', $searchService);
+    $container->set('search_replace.search.string', $searchService);
   }
 
   /**
@@ -60,8 +60,8 @@ class SearchStringTest extends UnitTestCase {
    */
   public function testSearchString() {
 
-    $this->assertEquals([], \Drupal::service('pega_search_replace.search.string')->searchAStringPrepareRows(''));
-    $this->assertEquals([], \Drupal::service('pega_search_replace.search.string')->searchAStringPrepareRows('some-string'));
+    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchAStringPrepareRows(''));
+    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchAStringPrepareRows('some-string'));
 
   }
 

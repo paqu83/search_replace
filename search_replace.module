@@ -2,13 +2,13 @@
 
 /**
  * @file
- * Pega search and replace module.
+ * Search and replace module.
  */
 
 /**
  * Batch operation for batch replace.
  */
-function batch_pega_search_replace($data, $operation_details, &$context) {
+function batch_search_replace($data, $operation_details, &$context) {
   foreach ($data['table'] as $item) {
     $entityData = explode("::", $item);
     $entityType = $entityData[1];
@@ -35,7 +35,7 @@ function batch_pega_search_replace($data, $operation_details, &$context) {
 /**
  * Batch 'finished' callback.
  */
-function batch_pega_search_replace_finished($success, $results, $operations) {
+function batch_search_replace_finished($success, $results, $operations) {
   $messenger = \Drupal::messenger();
   if ($success) {
     $messenger->addMessage(t('@count results processed.', ['@count' => count($results)]));

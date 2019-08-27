@@ -1,0 +1,4 @@
+services:
+  search_replace.search.string:
+    class: Drupal\search_replace\Services\SearchService
+    arguments: ['@entity_type.manager', '@database', '@entity.manager', '@entity_field.manager']

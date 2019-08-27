@@ -1,21 +1,21 @@
 <?php
 
-namespace Drupal\pega_search_replace\Form;
+namespace Drupal\search_replace\Form;
 
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\pega_search_replace\Services\SearchService;
+use Drupal\search_replace\Services\SearchService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 
 /**
- * Class PegaSearchReplaceForm.
+ * Class SearchReplaceForm.
  *
- * @package Drupal\pega_search_replace\Form
+ * @package Drupal\search_replace\Form
  */
-class PegaSearchReplaceForm extends FormBase {
+class SearchReplaceForm extends FormBase {
 
   /**
    * The entity type manager service.
@@ -27,7 +27,7 @@ class PegaSearchReplaceForm extends FormBase {
   /**
    * Search searvice used for providing search results.
    *
-   * @var \Drupal\pega_search_replace\Services\SearchService
+   * @var \Drupal\search_replace\Services\SearchService
    */
   protected $searchService;
 
@@ -48,7 +48,7 @@ class PegaSearchReplaceForm extends FormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('pega_search_replace.search.string')
+      $container->get('search_replace.search.string')
 
     );
   }
@@ -57,13 +57,14 @@ class PegaSearchReplaceForm extends FormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'pega_search_replace_form';
+    return 'search_replace_form';
   }
 
   /**
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+
     $filters = $form_state->get('filters');
     $search_string = empty($filters['search_string']) ? "" : $filters['search_string'];
 
@@ -207,7 +208,7 @@ class PegaSearchReplaceForm extends FormBase {
     $operations = [];
     foreach ($itemsToProcess as $i => $table) {
       $operations[] = [
-        'batch_pega_search_replace',
+        'batch_search_replace',
         [
           [
             'table' => $table,
@@ -221,7 +222,7 @@ class PegaSearchReplaceForm extends FormBase {
     $batch = [
       'title' => $this->t('Working hard on @num operations', ['@num' => count($itemsToProcess)]),
       'operations' => $operations,
-      'finished' => 'batch_pega_search_replace_finished',
+      'finished' => 'batch_search_replace_finished',
     ];
     batch_set($batch);
   }

@@ -1,4 +1,0 @@
-services:
-  pega_search_replace.search.string:
-    class: Drupal\pega_search_replace\Services\SearchService
-    arguments: ['@entity_type.manager', '@database']

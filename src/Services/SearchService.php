@@ -1,13 +1,18 @@
 <?php
 
-namespace Drupal\pega_search_replace\Services;
+namespace Drupal\search_replace\Services;
 
 use Drupal\Core\Url;
 use Drupal\Core\Link;
+use Drupal\Core\Entity\ContentEntityType;
+use \Drupal\Core\Entity\EntityTypeManagerInterface;
+use \Drupal\Core\Database\Connection;
+use \Drupal\Core\Entity\EntityManager;
+use \Drupal\Core\Entity\EntityFieldManager;
 
 /**
  * Class SearchService
- * @package Drupal\pega_search_replace\Services
+ * @package Drupal\search_replace\Services
  */
 class SearchService {
 
@@ -17,6 +22,20 @@ class SearchService {
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityTypeManager;
+
+  /**
+   * Entity  Manager.
+   *
+   * @var \Drupal\Core\Entity\EntityManager
+   */
+  protected $entityManager;
+
+  /**
+   * Entity  Manager.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManager
+   */
+  protected $entityFieldManager;
 
   /**
    * Database service.
@@ -36,10 +55,32 @@ class SearchService {
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    */
-  public function __construct(\Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager, \Drupal\Core\Database\Connection $database) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager,
+                              Connection $database,
+                              EntityManager $entityManager,
+                              EntityFieldManager $entityFieldManager) {
     $this->entityTypeManager = $entityTypeManager;
     $this->database = $database;
+    $this->entityManager = $entityManager;
+    $this->entityFieldManager = $entityFieldManager;
+
   }
+
+// testing.
+//  public function searchAStringAlpha() {
+//    $content_entity_types = [];
+//    $entity_type_definations = $this->entityTypeManager->getDefinitions();
+//    /* @var $definition EntityTypeInterface */
+//    foreach ($entity_type_definations as $definition) {
+//      if ($definition instanceof ContentEntityType) {
+//        $content_entity_types[] = $definition;
+//      }
+//    }
+//
+//    $field_map = $this->entityFieldManager->getFieldMap();
+//    $field_map['node'];
+//
+//  }
 
   /**
    * Search for entities by string and prepare row data.
