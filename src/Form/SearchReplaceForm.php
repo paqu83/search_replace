@@ -129,7 +129,7 @@ class SearchReplaceForm extends FormBase {
         $this->t('Title'),
         $this->t('Edit'),
         $this->t('Found in field'),
-        $this->t('Tips for paragraphs'),
+        $this->t('Search string surrounding'),
 
       ],
       '#options' => $rows,

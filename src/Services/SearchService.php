@@ -86,9 +86,12 @@ class SearchService {
    * Search for entities by string and prepare row data.
    *
    * @param $search_string
+   *   Search string.
+   *
    * @return array
+   *   Array of result rows.
    */
-  public function searchAStringPrepareRows($search_string) {
+  public function searchAstringPrepareRows($search_string) {
     if (empty($search_string)) {
       return [];
     }
@@ -110,14 +113,17 @@ class SearchService {
         $fieldName .= "_value";
         $fieldExists = $connection->query("SHOW COLUMNS FROM $tableName LIKE :fieldName", [":fieldName" => $fieldName])->fetchAssoc();
         if (!empty($fieldExists)) {
-          $sql = "SELECT `entity_id` FROM  $tableName WHERE $fieldName LIKE :search_string AND `langcode`='en' AND `deleted`=0 GROUP BY `entity_id` LIMIT 500";
+          $sql = "SELECT `entity_id`, `$fieldName` AS `field_content` FROM  $tableName WHERE $fieldName LIKE :search_string AND `langcode`='en' AND `deleted`=0 LIMIT 500";
           $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%'])->fetchAll();
           if (!empty($found)) {
             foreach ($found as $foundItem) {
+              $fieldBody = $foundItem->field_content;
+
               $entitiesData[] = [
                 'entity_id' => $foundItem->entity_id,
                 'field_name' => str_replace('_value', '', $fieldName),
-                'type' => $searchEntityName
+                'type' => $searchEntityName,
+                'big_picture' => $this->findWords($fieldBody, $search_string)
               ];
             }
           }
@@ -139,7 +145,7 @@ class SearchService {
           $entityData['node']->getTitle(),
           $link->toString(),
           $entityData['field_name'],
-          empty($entityData['tips']) ? "" : $entityData['tips']
+          $entityData['big_picture']
         ];
       }
     }
@@ -148,10 +154,28 @@ class SearchService {
   }
 
   /**
+   * Helper function to get search string surrounding.
+   *
+   * @param $haystack
+   * @param $needle
+   * @return bool|mixed
+   */
+  private function findWords($haystack, $needle) {
+    $regex = '/[^*]{0,100}' . preg_quote($needle) . '[^*]{0,100}/';
+
+    if (preg_match($regex, $haystack, $matches)) {
+      return $matches[0];
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  /**
    * Group nodes from paragraphs.
    * @param $entitiesData
    */
-  private function getAndGroupNodesFromParagraphs(&$entitiesData){
+  private function getAndGroupNodesFromParagraphs(&$entitiesData) {
     foreach ($entitiesData as $key => &$entityData) {
       $this->tips = [];
       $entityData['entity'] = $this->entityTypeManager->getStorage($entityData['type'])->load($entityData['entity_id']);
