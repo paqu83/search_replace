@@ -87,6 +87,7 @@ class SearchReplaceForm extends FormBase {
       '#title' => $this->t('Search string'),
       '#placeholder' => $this->t('search for string'),
       '#default_value' => $search_string,
+      '#required' => TRUE
     ];
 
     $form['filters']['actions'] = [
@@ -97,34 +98,46 @@ class SearchReplaceForm extends FormBase {
       '#value' => $this->t('Search'),
     ];
     // Add a Reset button if any filters are set.
+
+
+    $return = $this->searchService->searchAStringPrepareRows($search_string);
+    $rows = $return['rows'];
+
     if (!empty($search_string)) {
       $form['filters']['actions']['reset'] = [
         '#type' => 'submit',
         '#value' => $this->t('Reset'),
-        '#submit' => array('::resetForm'),
+        '#submit' => ['::resetForm'],
+      ];
+      $form['table_actions'] = [
+        '#type' => 'container',
+        '#weight' => 10,
+        '#attributes' => ['class' => ['container-inline']],
+      ];
+      $form['table_actions']['replace'] = [
+        '#type' => 'submit',
+        '#value' => 'Replace selected',
+        '#submit' => ['::formPage1Submit'],
+        '#weight' => 10,
+        '#validate' => ['::replaceValidate'],
+      ];
+      $form['table_actions']['help'] = [
+        '#type' => 'item',
+        '#markup' => t('Showing :showCount of :allCount, skipped :skipped (broken relations)',
+          [
+            ':showCount' => count($rows),
+            ':allCount' => $return['allCount'],
+            ':skipped' => $return['skipped']
+          ]
+        ),
       ];
     }
-
-    $form['table_actions'] = [
-      '#type' => 'container',
-      '#weight' => 10,
-      '#tree' => TRUE,
-    ];
-
-    $form['table_actions']['replace'] = [
-      '#type' => 'submit',
-      '#value' => 'Replace selected',
-      '#submit' => array('::formPage1Submit'),
-      '#weight' => 10,
-      '#validate' => ['::replaceValidate'],
-    ];
-
-    $rows = $this->searchService->searchAStringPrepareRows($search_string);
 
     $form['table'] = [
       '#header' => [
         $this->t('ID'),
         $this->t('Entity type'),
+        $this->t('Lang'),
         $this->t('Entity type bundle'),
         $this->t('Title'),
         $this->t('Edit'),
@@ -162,6 +175,18 @@ class SearchReplaceForm extends FormBase {
       $form_state->setErrorByName('replace', $this->t('No items selected'));
     }
 
+  }
+
+  /**
+   * Validate form.
+   * @param array $form
+   * @param FormStateInterface $form_state
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $filters = $form_state->getValue('filters');
+    if (!empty($filters) && strlen($filters['search_string']) < 3) {
+      $form_state->setErrorByName('search_string', $this->t('The string you are searching is to short. Min 3 characters.'));
+    }
   }
 
   /**

@@ -9,13 +9,18 @@
  * Batch operation for batch replace.
  */
 function batch_search_replace($data, $operation_details, &$context) {
+
   foreach ($data['table'] as $item) {
     $entityData = explode("::", $item);
     $entityType = $entityData[1];
     $entityId = $entityData[0];
     $entityField = $entityData[2];
+    $entity_lang = $entityData[3];
 
     $entity = \Drupal::entityTypeManager()->getStorage($entityType)->load($entityId);
+    if ($entity->hasTranslation($entity_lang)) {
+      $entity = $entity->getTranslation($entity_lang);
+    }
     if (!empty($entity)) {
       $fieldValue = $entity->get($entityField)->value;
       $fieldValue = str_replace($data['search_string'], $data['replace'], $fieldValue);

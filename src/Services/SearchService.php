@@ -50,6 +50,7 @@ class SearchService {
    */
   protected $tips;
 
+
   /**
    * SearchService constructor.
    *
@@ -93,64 +94,88 @@ class SearchService {
    */
   public function searchAstringPrepareRows($search_string) {
     if (empty($search_string)) {
-      return [];
+      return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
     }
     $entitiesData = [];
     $etitiesToSearch = ['node', 'paragraph'];
-    $rows = [];
     if (empty($search_string)) {
-      return $rows;
+      return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
     }
+    $language_manager = \Drupal::languageManager();
+    foreach ($language_manager->getLanguages() as $language) {
+      $langcode = $language->getId();
+      foreach ($etitiesToSearch as $searchEntityName) {
+        $connection = $this->database;
+        $likeString = $searchEntityName . '__field_%';
+        $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $likeString]);
+        $results = $query->fetchCol('table_name');
+        foreach ($results as $tableName) {
+          $fieldName = explode($searchEntityName . "__", $tableName);
+          $fieldName = end($fieldName);
+          $fieldName .= "_value";
+          $fieldExists = $connection->query("SHOW COLUMNS FROM $tableName LIKE :fieldName", [":fieldName" => $fieldName])->fetchAssoc();
+          if (!empty($fieldExists)) {
+            $sql = "SELECT `entity_id`, `$fieldName` AS `field_content`, `langcode` " .
+              "FROM  $tableName WHERE $fieldName LIKE :search_string AND `langcode` = :langcode AND `deleted`=0";
+            $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%', ':langcode' => $langcode])->fetchAll();
+            if (!empty($found)) {
+              foreach ($found as $foundItem) {
+                $fieldBody = $foundItem->field_content;
 
-    foreach ($etitiesToSearch as $searchEntityName) {
-      $connection = $this->database;
-      $likeString = $searchEntityName . '__field_%';
-      $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $likeString]);
-      $results = $query->fetchCol('table_name');
-      foreach ($results as $tableName) {
-        $fieldName = explode($searchEntityName . "__", $tableName);
-        $fieldName = end($fieldName);
-        $fieldName .= "_value";
-        $fieldExists = $connection->query("SHOW COLUMNS FROM $tableName LIKE :fieldName", [":fieldName" => $fieldName])->fetchAssoc();
-        if (!empty($fieldExists)) {
-          $sql = "SELECT `entity_id`, `$fieldName` AS `field_content` FROM  $tableName WHERE $fieldName LIKE :search_string AND `langcode`='en' AND `deleted`=0 LIMIT 500";
-          $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%'])->fetchAll();
-          if (!empty($found)) {
-            foreach ($found as $foundItem) {
-              $fieldBody = $foundItem->field_content;
-
-              $entitiesData[] = [
-                'entity_id' => $foundItem->entity_id,
-                'field_name' => str_replace('_value', '', $fieldName),
-                'type' => $searchEntityName,
-                'big_picture' => $this->findWords($fieldBody, $search_string)
-              ];
+                $entitiesData[] = [
+                  'entity_id' => $foundItem->entity_id,
+                  'field_name' => str_replace('_value', '', $fieldName),
+                  'type' => $searchEntityName,
+                  'big_picture' => $this->findWords($fieldBody, $search_string),
+                  'langcode' => $foundItem->langcode
+                ];
+              }
             }
           }
         }
       }
     }
 
+
     if (!empty($entitiesData)) {
+      $allCount = count($entitiesData);
+      $entitiesData = array_slice($entitiesData, 0, 100);
       $this->getAndGroupNodesFromParagraphs($entitiesData);
+      $skipped = 100 - count($entitiesData);
       foreach ($entitiesData as $entityData) {
 
-        $url = Url::fromRoute('entity.node.edit_form', ['node' => $entityData['node']->id()]);
+        $url = Url::fromRoute('entity.node.edit_form', ['node' => $entityData['node']->id()], ['language' => $entityData['node']->language()]);
         $link = Link::fromTextAndUrl('edit', $url);
 
-        $rows[$entityData['entity']->id() . "::" . $entityData['type'] . "::" . $entityData['field_name']] = [
+
+        $entityData['big_picture'] = str_replace($search_string, '<bg class="color-error">' . $search_string . '</bg>', htmlentities($entityData['big_picture']));
+        $rows[$entityData['entity']->id() . "::" . $entityData['type'] . "::" . $entityData['field_name'] . "::" . $entityData['langcode']] = [
           $entityData['entity']->id(),
           $entityData['type'],
+          $entityData['langcode'],
           $entityData['entity']->bundle(),
           $entityData['node']->getTitle(),
           $link->toString(),
           $entityData['field_name'],
-          $entityData['big_picture']
+          [
+            'data' =>
+            [
+              '#markup' => $entityData['big_picture'],
+              '#allowed_tags' => ['bg']
+            ]
+          ]
+
+
+
         ];
       }
     }
 
-    return $rows;
+    return [
+      'rows' => empty($rows) ? [] : $rows,
+      'allCount' => empty($allCount) ? 0 : $allCount,
+      'skipped' => empty($skipped) ? 0 : $skipped
+    ];
   }
 
   /**
@@ -161,7 +186,7 @@ class SearchService {
    * @return bool|mixed
    */
   private function findWords($haystack, $needle) {
-    $regex = '/[^*]{0,100}' . preg_quote($needle) . '[^*]{0,100}/';
+    $regex = '/[^*]{0,300}' . preg_quote($needle) . '[^*]{0,300}/';
 
     if (preg_match($regex, $haystack, $matches)) {
       return $matches[0];
@@ -179,6 +204,9 @@ class SearchService {
     foreach ($entitiesData as $key => &$entityData) {
       $this->tips = [];
       $entityData['entity'] = $this->entityTypeManager->getStorage($entityData['type'])->load($entityData['entity_id']);
+      if ($entityData['entity']->hasTranslation($entityData['langcode'])) {
+        $entityData['entity'] = $entityData['entity']->getTranslation($entityData['langcode']);
+      }
       if ($entityData['type'] != 'paragraph') {
         $entityData['node'] = $entityData['entity'];
         continue;
