@@ -5,3 +5,5 @@ search_replace.main_form:
     _title: 'Search for a string in content.'
   requirements:
     _permission: 'administer content'
+
+    #TODO: Add custom permissiom to module to be able then assign this to custom role

@@ -3,4 +3,3 @@ type: module
 description: Serach and replace string in a content entities
 core: 8.x
 package: Custom
-dependencies:

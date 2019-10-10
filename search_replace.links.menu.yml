@@ -1,6 +1,6 @@
 search_replace.replace_form:
-  title: 'Replace string in content.'
+  title: 'Find and replace'
   route_name: search_replace.main_form
-  description: 'Replace string in content.'
+  description: 'Find and review phrase in content.'
   parent: system.admin_content
   weight: 200

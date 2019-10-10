@@ -81,6 +81,7 @@ class SearchService {
       return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
     }
 
+    //TODO: Try to change this chrismas tree to some services.
     foreach ($this->languageManager->getLanguages() as $language) {
       $lang_code = $language->getId();
       foreach ($entities_to_search as $search_entity_name) {

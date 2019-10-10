@@ -14,7 +14,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @package Drupal\search_replace\Form
  */
 class SearchReplaceForm extends FormBase {
-
+//TODO: try to use this https://www.sitepoint.com/how-to-build-multi-step-forms-in-drupal-8/ rather than single form with steps
   /**
    * The entity type manager service.
    *
@@ -32,7 +32,7 @@ class SearchReplaceForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, SearchService $searchService) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, SearchService $searchService) { //TODO: Search service should be Interface like EntityTypeInterface.
     $this->entityTypeManager = $entity_type_manager;
     $this->searchService = $searchService;
   }
@@ -124,6 +124,7 @@ class SearchReplaceForm extends FormBase {
         '#weight' => 10,
         '#validate' => ['::replaceValidate'],
       ];
+      // TODO: Remove deprecated t() method
       $form['table_actions']['help'] = [
         '#type' => 'item',
         '#markup' => t('Showing :showCount of :allCount, skipped :skipped (broken relations)',
@@ -143,7 +144,7 @@ class SearchReplaceForm extends FormBase {
         $this->t('Lang'),
         $this->t('Entity type bundle'),
         $this->t('Title'),
-        $this->t('Edit'),
+        $this->t('Edit'),//TODO : edit should be the last column.
         $this->t('Found in field'),
         $this->t('Search string surrounding'),
 
