@@ -7,7 +7,7 @@ use Drupal\search_replace\Services\SearchService;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 
 /**
- * Class SearchStringTest. For testing Serach Service.
+ * Class SearchStringTest. For testing Search Service.
  *
  * @package Drupal\search_replace\Tests\Unit
  */
@@ -60,8 +60,8 @@ class SearchStringTest extends UnitTestCase {
    */
   public function testSearchString() {
 
-    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchAStringPrepareRows(''));
-    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchAStringPrepareRows('some-string'));
+    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchStringPrepareRows(''));
+    $this->assertEquals([], \Drupal::service('search_replace.search.string')->searchStringPrepareRows('some-string'));
 
   }
 

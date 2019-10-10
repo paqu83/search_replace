@@ -7,35 +7,38 @@
 
 /**
  * Batch operation for batch replace.
+ *
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
  */
 function batch_search_replace($data, $operation_details, &$context) {
 
   foreach ($data['table'] as $item) {
-    $entityData = explode("::", $item);
-    $entityType = $entityData[1];
-    $entityId = $entityData[0];
-    $entityField = $entityData[2];
-    $entity_lang = $entityData[3];
+    $entity_data = explode("::", $item);
+    $entity_type = $entity_data[1];
+    $entity_id = $entity_data[0];
+    $entity_field = $entity_data[2];
+    $entity_lang = $entity_data[3];
 
-    $entity = \Drupal::entityTypeManager()->getStorage($entityType)->load($entityId);
+    $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($entity_id);
     if ($entity->hasTranslation($entity_lang)) {
       $entity = $entity->getTranslation($entity_lang);
     }
     if (!empty($entity)) {
-      $fieldValue = $entity->get($entityField)->value;
+      $fieldValue = $entity->get($entity_field)->value;
       $fieldValue = str_replace($data['search_string'], $data['replace'], $fieldValue);
-      $entity->set($entityField, $fieldValue);
+      $entity->set($entity_field, $fieldValue);
       $entity->save();
-      $context['results'][] = $entityId;
+      $context['results'][] = $entity_id;
     }
   }
 
   // Optional message displayed under the progressbar.
   $context['message'] = t('Running Batch "@id" @details',
-    ['@id' => $entityId, '@details' => $operation_details]
+    ['@id' => empty($entity_id) ? '' : $entity_id, '@details' => $operation_details]
   );
 }
-
 
 /**
  * Batch 'finished' callback.
@@ -60,4 +63,3 @@ function batch_search_replace_finished($success, $results, $operations) {
     );
   }
 }
-

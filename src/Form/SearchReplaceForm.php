@@ -2,13 +2,11 @@
 
 namespace Drupal\search_replace\Form;
 
-use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\search_replace\Services\SearchService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-
 
 /**
  * Class SearchReplaceForm.
@@ -25,19 +23,16 @@ class SearchReplaceForm extends FormBase {
   protected $entityTypeManager;
 
   /**
-   * Search searvice used for providing search results.
+   * Search service used for providing search results.
    *
    * @var \Drupal\search_replace\Services\SearchService
    */
   protected $searchService;
 
-
   /**
    * {@inheritdoc}
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager,
-                              SearchService $searchService
-  ) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, SearchService $searchService) {
     $this->entityTypeManager = $entity_type_manager;
     $this->searchService = $searchService;
   }
@@ -61,7 +56,18 @@ class SearchReplaceForm extends FormBase {
   }
 
   /**
-   * {@inheritdoc}
+   * Build form.
+   *
+   * @param array $form
+   *   Form render array.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state instance.
+   *
+   * @return array
+   *   Render form array.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
 
@@ -75,7 +81,6 @@ class SearchReplaceForm extends FormBase {
       return self::formPageThree($form, $form_state);
     }
 
-
     // Add filters.
     $form['filters'] = [
       '#type' => 'container',
@@ -87,7 +92,7 @@ class SearchReplaceForm extends FormBase {
       '#title' => $this->t('Search string'),
       '#placeholder' => $this->t('search for string'),
       '#default_value' => $search_string,
-      '#required' => TRUE
+      '#required' => TRUE,
     ];
 
     $form['filters']['actions'] = [
@@ -98,9 +103,7 @@ class SearchReplaceForm extends FormBase {
       '#value' => $this->t('Search'),
     ];
     // Add a Reset button if any filters are set.
-
-
-    $return = $this->searchService->searchAStringPrepareRows($search_string);
+    $return = $this->searchService->searchStringPrepareRows($search_string);
     $rows = $return['rows'];
 
     if (!empty($search_string)) {
@@ -127,7 +130,7 @@ class SearchReplaceForm extends FormBase {
           [
             ':showCount' => count($rows),
             ':allCount' => $return['allCount'],
-            ':skipped' => $return['skipped']
+            ':skipped' => $return['skipped'],
           ]
         ),
       ];
@@ -151,16 +154,16 @@ class SearchReplaceForm extends FormBase {
       '#weight' => 20,
     ];
 
-
     return $form;
   }
 
-
-
   /**
    * Validate replace string.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function replaceValidate(array &$form, FormStateInterface $form_state) {
     $table = $form_state->getValue('table');
@@ -178,9 +181,7 @@ class SearchReplaceForm extends FormBase {
   }
 
   /**
-   * Validate form.
-   * @param array $form
-   * @param FormStateInterface $form_state
+   * {@inheritDoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $filters = $form_state->getValue('filters');
@@ -191,8 +192,11 @@ class SearchReplaceForm extends FormBase {
 
   /**
    * Handle page 1 submit.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function formPage1Submit(array &$form, FormStateInterface $form_state) {
     $form_state
@@ -203,8 +207,11 @@ class SearchReplaceForm extends FormBase {
 
   /**
    * Handle page 2 submit.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function formPage2Submit(array &$form, FormStateInterface $form_state) {
     $form_state
@@ -217,8 +224,11 @@ class SearchReplaceForm extends FormBase {
 
   /**
    * Handle page 3 submit.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function formPage3Submit(array &$form, FormStateInterface $form_state) {
     $table = $form_state->getValue('table');
@@ -238,7 +248,7 @@ class SearchReplaceForm extends FormBase {
           [
             'table' => $table,
             "search_string" => $form_state->getValue('search_string'),
-            "replace" => $form_state->getValue('replace_by')
+            "replace" => $form_state->getValue('replace_by'),
           ],
           $this->t('(Operation @operation)', ['@operation' => $i]),
         ],
@@ -254,15 +264,17 @@ class SearchReplaceForm extends FormBase {
 
   /**
    * Prepare form for page 2.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
-   * @return array
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function formPageTwo(array &$form, FormStateInterface $form_state) {
     $filters = $form_state->getValue('filters');
     $form['description'] = [
       '#type' => 'item',
-      '#title' => $this->t('Replace string: ') . $filters['search_string'],
+      '#title' => $this->t('Replace string: @search_string', ['@search_string' => $filters['search_string']]),
     ];
 
     $form['replace_by'] = [
@@ -272,11 +284,11 @@ class SearchReplaceForm extends FormBase {
     ];
     $form['table'] = [
       '#type' => 'hidden',
-      '#value' => $form_state->getValue('table')
+      '#value' => $form_state->getValue('table'),
     ];
     $form['search_string'] = [
       '#type' => 'hidden',
-      '#value' => $filters['search_string']
+      '#value' => $filters['search_string'],
     ];
     $form['back'] = [
       '#type' => 'submit',
@@ -288,7 +300,7 @@ class SearchReplaceForm extends FormBase {
       '#type' => 'submit',
       '#button_type' => 'primary',
       '#value' => $this->t('Submit'),
-      '#submit' => ['::formPage2Submit']
+      '#submit' => ['::formPage2Submit'],
     ];
 
     return $form;
@@ -296,27 +308,29 @@ class SearchReplaceForm extends FormBase {
 
   /**
    * Prepare form for page 3.
+   *
    * @param array $form
-   * @param FormStateInterface $form_state
-   * @return array
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
    */
   public function formPageThree(array &$form, FormStateInterface $form_state) {
 
     $form['description'] = [
       '#type' => 'item',
-      '#title' => $this->t('Are you sure, you want to replace string: %search_string for: %replace_by ?', [ '%search_string' => $form_state->getValue('search_string'), '%replace_by' => $form_state->getValue('replace_by')]),
+      '#title' => $this->t('Are you sure, you want to replace string: %search_string for: %replace_by ?', ['%search_string' => $form_state->getValue('search_string'), '%replace_by' => $form_state->getValue('replace_by')]),
     ];
     $form['table'] = [
       '#type' => 'hidden',
-      '#value' => $form_state->getValue('table')
+      '#value' => $form_state->getValue('table'),
     ];
     $form['replace_by'] = [
       '#type' => 'hidden',
-      '#value' => $form_state->getValue('replace_by')
+      '#value' => $form_state->getValue('replace_by'),
     ];
     $form['search_string'] = [
       '#type' => 'hidden',
-      '#value' => $form_state->getValue('search_string')
+      '#value' => $form_state->getValue('search_string'),
     ];
 
     $form['back'] = [
@@ -329,7 +343,7 @@ class SearchReplaceForm extends FormBase {
       '#type' => 'submit',
       '#button_type' => 'primary',
       '#value' => $this->t('Yes I am sure.'),
-      '#submit' => ['::formPage3Submit']
+      '#submit' => ['::formPage3Submit'],
     ];
 
     return $form;
