@@ -66,3 +66,5 @@ function batch_search_replace_finished($success, $results, $operations) {
 
 //TODO: Add plugin type/manager rather than using .module https://www.drupal.org/docs/8/api/plugin-api/plugin-api-overview
 //TODO: Maybe would be nice to make not batch replace method extendable but the logic to add new conent entites in search service.
+//Adrian Lorenc 17:24
+//http://vjira2:8080/browse/AC-9 - tu dodalem nowy typ pluginu RemoteSource
