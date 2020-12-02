@@ -5,8 +5,8 @@ namespace Drupal\search_replace\Services;
 use Drupal\Core\Url;
 use Drupal\Core\Link;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Database\Connection;
-use Drupal\Core\Language\LanguageManager;
+use Drupal\search_replace\DbStringSearchPluginManager;
+use Drupal\search_replace\SearchReplaceInterface;
 
 /**
  * Class SearchService.
@@ -23,25 +23,16 @@ class SearchService {
   protected $entityTypeManager;
 
   /**
-   * Database service.
-   *
-   * @var \Drupal\Core\Database\Connection
-   */
-  protected $database;
-
-  /**
-   * Language Manager.
-   *
-   * @var \Drupal\Core\Language\LanguageManager
-   */
-  protected $languageManager;
-
-  /**
    * Tips to help manually finding needed paragraph.
    *
    * @var array
    */
   protected $tips;
+
+  /**
+   * @var DbStringSearchPluginManager
+   */
+  private $dbStringSearchPlugin;
 
   /**
    * SearchService constructor.
@@ -53,10 +44,9 @@ class SearchService {
    * @param \Drupal\Core\Language\LanguageManager $languageManager
    *   Language Manager.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, Connection $database, LanguageManager $languageManager) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager,SearchReplaceInterface $dbStringSearchPlugin) {
     $this->entityTypeManager = $entityTypeManager;
-    $this->database = $database;
-    $this->languageManager = $languageManager;
+    $this->dbStringSearchPlugin = $dbStringSearchPlugin;
   }
 
   /**
@@ -76,44 +66,10 @@ class SearchService {
       return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
     }
     $entities_data = [];
-    $entities_to_search = ['node', 'paragraph'];
-    if (empty($search_string)) {
-      return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
-    }
-
-    //TODO: Try to change this chrismas tree to some services.
-    foreach ($this->languageManager->getLanguages() as $language) {
-      $lang_code = $language->getId();
-      foreach ($entities_to_search as $search_entity_name) {
-        $connection = $this->database;
-        $like_string = $search_entity_name . '__field_%';
-        $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $like_string]);
-        $results = $query->fetchCol('table_name');
-        foreach ($results as $table_name) {
-          $field_name = explode($search_entity_name . "__", $table_name);
-          $field_name = end($field_name);
-          $field_name .= "_value";
-          $field_exists = $connection->query("SHOW COLUMNS FROM $table_name LIKE :fieldName", [":fieldName" => $field_name])->fetchAssoc();
-          if (!empty($field_exists)) {
-            $sql = "SELECT `entity_id`, `$field_name` AS `field_content`, `langcode` " .
-              "FROM  $table_name WHERE $field_name LIKE :search_string AND `langcode` = :langcode AND `deleted`=0";
-            $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%', ':langcode' => $lang_code])->fetchAll();
-            if (!empty($found)) {
-              foreach ($found as $found_item) {
-                $field_body = $found_item->field_content;
-
-                $entities_data[] = [
-                  'entity_id' => $found_item->entity_id,
-                  'field_name' => str_replace('_value', '', $field_name),
-                  'type' => $search_entity_name,
-                  'big_picture' => $this->findWords($field_body, $search_string),
-                  'langcode' => $found_item->langcode,
-                ];
-              }
-            }
-          }
-        }
-      }
+    $db_string_search = $this->dbStringSearchPlugin->getDefinitions();
+    foreach ($db_string_search as $plugin_id => $sandwich_plugin_definition) {
+      $plugin = $this->dbStringSearchPlugin->createInstance($plugin_id);
+      $entities_data = array_merge($plugin->searchInDb($search_string), $entities_data);
     }
 
     if (!empty($entities_data)) {
@@ -151,28 +107,6 @@ class SearchService {
       'allCount' => empty($all_count) ? 0 : $all_count,
       'skipped' => empty($skipped) ? 0 : $skipped,
     ];
-  }
-
-  /**
-   * Helper function to get search string surrounding.
-   *
-   * @param string $haystack
-   *   String to search into.
-   * @param string $needle
-   *   Searched string.
-   *
-   * @return bool|array
-   *   False or array with matches.
-   */
-  private function findWords($haystack, $needle) {
-    $regex = '/[^*]{0,300}' . preg_quote($needle) . '[^*]{0,300}/';
-
-    if (preg_match($regex, $haystack, $matches)) {
-      return $matches[0];
-    }
-    else {
-      return FALSE;
-    }
   }
 
   /**

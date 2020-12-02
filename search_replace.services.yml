@@ -1,4 +1,8 @@
 services:
   search_replace.search.string:
     class: Drupal\search_replace\Services\SearchService
-    arguments: ['@entity_type.manager', '@database', '@language_manager']
+    arguments: ['@entity_type.manager', '@plugin.manager.sandwich']
+  plugin.manager.sandwich:
+    class: Drupal\search_replace\SearchReplacePluginManager
+    parent: default_plugin_manager
+
