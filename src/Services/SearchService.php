@@ -6,7 +6,7 @@ use Drupal\Core\Url;
 use Drupal\Core\Link;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\search_replace\DbStringSearchPluginManager;
-use Drupal\search_replace\SearchReplaceInterface;
+use Drupal\search_replace\SearchReplacePluginManager;
 
 /**
  * Class SearchService.
@@ -16,9 +16,9 @@ use Drupal\search_replace\SearchReplaceInterface;
 class SearchService {
 
   /**
-   * Entity type Manager.
+   * Entity Type Manager.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityTypeManager;
 
@@ -30,7 +30,9 @@ class SearchService {
   protected $tips;
 
   /**
-   * @var DbStringSearchPluginManager
+   * Plugins used for searching string in the database.
+   *
+   * @var Drupal\search_replace\SearchReplacePluginManager
    */
   private $dbStringSearchPlugin;
 
@@ -39,12 +41,9 @@ class SearchService {
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   Entity Type Manager.
-   * @param \Drupal\Core\Database\Connection $database
-   *   Database Connection.
-   * @param \Drupal\Core\Language\LanguageManager $languageManager
-   *   Language Manager.
+   * @param SearchReplacePluginManager $dbStringSearchPlugin
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager,SearchReplaceInterface $dbStringSearchPlugin) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, SearchReplacePluginManager $dbStringSearchPlugin) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dbStringSearchPlugin = $dbStringSearchPlugin;
   }
@@ -52,14 +51,9 @@ class SearchService {
   /**
    * Search for entities by string and prepare row data.
    *
-   * @param string $search_string
-   *   Search string.
-   *
+   * @param $search_string
    * @return array
-   *   Array of result rows.
-   *
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
   public function searchStringPrepareRows($search_string) {
     if (empty($search_string)) {
@@ -67,39 +61,53 @@ class SearchService {
     }
     $entities_data = [];
     $db_string_search = $this->dbStringSearchPlugin->getDefinitions();
-    foreach ($db_string_search as $plugin_id => $sandwich_plugin_definition) {
+    foreach ($db_string_search as $plugin_id => $plugin_definition) {
       $plugin = $this->dbStringSearchPlugin->createInstance($plugin_id);
       $entities_data = array_merge($plugin->searchInDb($search_string), $entities_data);
     }
+    return $this->dataToRows($entities_data, $search_string);
+  }
 
-    if (!empty($entities_data)) {
-      $all_count = count($entities_data);
-      $entities_data = array_slice($entities_data, 0, 100);
-      $this->getAndGroupNodesFromParagraphs($entities_data);
-      $skipped = 100 - count($entities_data);
-      foreach ($entities_data as $entity_data) {
+  /**
+   * Convert data from db to rows in table.
+   *
+   * @param array $entities_data
+   * @param string $search_string
+   * @return array
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  private function dataToRows(array $entities_data, string $search_string) {
+    if (empty($entities_data)) {
+      return ['rows' => [], 'allCount' => 0, 'skipped' => 0];
+    }
+    $rows = [];
+    $all_count = count($entities_data);
+    $entities_data = array_slice($entities_data, 0, 100);
+    $this->getAndGroupNodesFromParagraphs($entities_data);
+    $skipped = 100 - count($entities_data);
+    foreach ($entities_data as $entity_data) {
 
-        $url = Url::fromRoute('entity.node.edit_form', ['node' => $entity_data['node']->id()], ['language' => $entity_data['node']->language()]);
-        $link = Link::fromTextAndUrl('edit', $url);
+      $url = Url::fromRoute('entity.node.edit_form', ['node' => $entity_data['node']->id()], ['language' => $entity_data['node']->language()]);
+      $link = Link::fromTextAndUrl('edit', $url);
 
-        $entity_data['big_picture'] = str_replace($search_string, '<bg class="color-error">' . $search_string . '</bg>', htmlentities($entity_data['big_picture']));
-        $rows[$entity_data['entity']->id() . "::" . $entity_data['type'] . "::" . $entity_data['field_name'] . "::" . $entity_data['langcode']] = [
-          $entity_data['entity']->id(),
-          $entity_data['type'],
-          $entity_data['langcode'],
-          $entity_data['entity']->bundle(),
-          $entity_data['node']->getTitle(),
-          $link->toString(),
-          $entity_data['field_name'],
-          [
-            'data' =>
+      $entity_data['big_picture'] = str_replace($search_string, '<bg class="color-error">' . $search_string . '</bg>', htmlentities($entity_data['big_picture']));
+      $rows[$entity_data['entity']->id() . "::" . $entity_data['type'] . "::" . $entity_data['field_name'] . "::" . $entity_data['langcode']] = [
+        $entity_data['entity']->id(),
+        $entity_data['type'],
+        $entity_data['langcode'],
+        $entity_data['entity']->bundle(),
+        method_exists($entity_data['node'], 'getTitle') ? $entity_data['node']->getTitle() : $entity_data['node']->label(),
+        $link->toString(),
+        $entity_data['field_name'],
+        [
+          'data' =>
             [
               '#markup' => $entity_data['big_picture'],
               '#allowed_tags' => ['bg'],
             ],
-          ],
-        ];
-      }
+        ],
+      ];
     }
 
     return [

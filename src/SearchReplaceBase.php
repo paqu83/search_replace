@@ -9,7 +9,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * A base class to help developers implement their own sandwich plugins.
+ * A base class to help developers implement their own search replace plugins.
  *
  * @see \Drupal\search_replace\Annotation\SearchReplace
  * @see \Drupal\search_replace\SearchReplaceInterface
