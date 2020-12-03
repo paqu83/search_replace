@@ -144,7 +144,7 @@ class SearchReplaceForm extends FormBase {
         $this->t('Lang'),
         $this->t('Entity type bundle'),
         $this->t('Title'),
-        $this->t('Edit'),//TODO : edit should be the last column.
+        $this->t('Edit'),
         $this->t('Found in field'),
         $this->t('Search string surrounding'),
 
