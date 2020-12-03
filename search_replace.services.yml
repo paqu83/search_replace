@@ -1,0 +1,8 @@
+services:
+  search_replace.search.string:
+    class: Drupal\search_replace\Services\SearchService
+    arguments: ['@entity_type.manager', '@plugin.manager.search_replace_plugin']
+  plugin.manager.search_replace_plugin:
+    class: Drupal\search_replace\SearchReplacePluginManager
+    parent: default_plugin_manager
+

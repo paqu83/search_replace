@@ -1,7 +1,0 @@
-pega_search_replace.main_form:
-  path: '/admin/pega_search_replace'
-  defaults:
-    _form: Drupal\pega_search_replace\Form\PegaSearchReplaceForm
-    _title: 'Search for a string in content.'
-  requirements:
-    _permission: 'administer content'
