@@ -72,13 +72,13 @@ class SearchReplaceForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $filters = $form_state->get('filters');
-    $search_string = empty($filters['search_string']) ? "" : $filters['search_string'];
+    $search_string = empty($filters['search_string']) ? '' : $filters['search_string'];
 
     if ($form_state->has('page_num') && $form_state->get('page_num') == 2) {
-      return self::formPageTwo($form, $form_state);
+      return self::formPage2($form, $form_state);
     }
     if ($form_state->has('page_num') && $form_state->get('page_num') == 3) {
-      return self::formPageThree($form, $form_state);
+      return self::formPage3($form, $form_state);
     }
 
     // Add filters.
@@ -124,10 +124,9 @@ class SearchReplaceForm extends FormBase {
         '#weight' => 10,
         '#validate' => ['::replaceValidate'],
       ];
-      // TODO: Remove deprecated t() method
       $form['table_actions']['help'] = [
         '#type' => 'item',
-        '#markup' => t('Showing :showCount of :allCount, skipped :skipped (broken relations)',
+        '#markup' => $this->t('Showing :showCount of :allCount, skipped :skipped (broken relations)',
           [
             ':showCount' => count($rows),
             ':allCount' => $return['allCount'],
@@ -187,7 +186,7 @@ class SearchReplaceForm extends FormBase {
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $filters = $form_state->getValue('filters');
     if (!empty($filters) && strlen($filters['search_string']) < 3) {
-      $form_state->setErrorByName('search_string', $this->t('The string you are searching is to short. Min 3 characters.'));
+      $form_state->setErrorByName('search_string', $this->t('The string you are searching is too short. Min. 3 characters.'));
     }
   }
 
@@ -248,8 +247,8 @@ class SearchReplaceForm extends FormBase {
         [
           [
             'table' => $table,
-            "search_string" => $form_state->getValue('search_string'),
-            "replace" => $form_state->getValue('replace_by'),
+            'search_string' => $form_state->getValue('search_string'),
+            'replace' => $form_state->getValue('replace_by'),
           ],
           $this->t('(Operation @operation)', ['@operation' => $i]),
         ],
@@ -271,7 +270,7 @@ class SearchReplaceForm extends FormBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   Form state data.
    */
-  public function formPageTwo(array &$form, FormStateInterface $form_state) {
+  public function formPage2(array &$form, FormStateInterface $form_state) {
     $filters = $form_state->getValue('filters');
     $form['description'] = [
       '#type' => 'item',
@@ -294,7 +293,7 @@ class SearchReplaceForm extends FormBase {
     $form['back'] = [
       '#type' => 'submit',
       '#value' => $this->t('Back'),
-      '#submit' => ['::formPageTwoBack'],
+      '#submit' => ['::formPage2Back'],
       '#limit_validation_errors' => [],
     ];
     $form['submit'] = [
@@ -315,7 +314,7 @@ class SearchReplaceForm extends FormBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   Form state data.
    */
-  public function formPageThree(array &$form, FormStateInterface $form_state) {
+  public function formPage3(array &$form, FormStateInterface $form_state) {
 
     $form['description'] = [
       '#type' => 'item',
@@ -337,7 +336,7 @@ class SearchReplaceForm extends FormBase {
     $form['back'] = [
       '#type' => 'submit',
       '#value' => $this->t('Back'),
-      '#submit' => ['::formPageTwoBack'],
+      '#submit' => ['::formPage2Back'],
       '#limit_validation_errors' => [],
     ];
     $form['submit'] = [
@@ -358,7 +357,7 @@ class SearchReplaceForm extends FormBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
    */
-  public function formPageTwoBack(array &$form, FormStateInterface $form_state) {
+  public function formPage2Back(array &$form, FormStateInterface $form_state) {
     $form_state
       ->set('page_num', 1)
       ->setRebuild(TRUE);

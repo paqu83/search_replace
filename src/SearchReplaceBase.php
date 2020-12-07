@@ -4,6 +4,7 @@ namespace Drupal\search_replace;
 
 use Drupal\Component\Plugin\PluginBase;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageManager;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -27,12 +28,18 @@ abstract class SearchReplaceBase extends PluginBase implements SearchReplaceInte
   protected $database;
 
   /**
+   * @var EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * {@inheritDoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, LanguageManager $language_manager, Connection $database) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, LanguageManager $language_manager, Connection $database, EntityTypeManagerInterface $entity_type_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->languageManager = $language_manager;
     $this->database = $database;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -45,6 +52,7 @@ abstract class SearchReplaceBase extends PluginBase implements SearchReplaceInte
       $plugin_definition,
       $container->get('language_manager'),
       $container->get('database'),
+      $container->get('entity_type.manager'),
     );
   }
 
