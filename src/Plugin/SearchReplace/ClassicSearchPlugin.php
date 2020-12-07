@@ -29,11 +29,10 @@ class ClassicSearchPlugin extends SearchReplaceBase {
       $like_string = '%__field_%';
       $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $like_string]);
       $results = $query->fetchCol('table_name');
-      $manager = \Drupal::service('entity_type.manager');
       foreach ($results as $table_name) {
         $table_name_exploded = explode("__field_", $table_name);
         try {
-          $storage = $manager->getStorage($table_name_exploded[0]);
+          $storage = $this->entityTypeManager->getStorage($table_name_exploded[0]);
         }
         catch (PluginNotFoundException $exception) {
           continue;
