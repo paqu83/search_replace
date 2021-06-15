@@ -27,7 +27,8 @@ class ClassicSearchPlugin extends SearchReplaceBase {
       $lang_code = $language->getId();
       $connection = $this->database;
       $like_string = '%__field_%';
-      $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `table_name` LIKE :likeString", [":likeString" => $like_string]);
+      $database = $connection->getConnectionOptions()["database"]; //TABLE_SCHEMA
+      $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `TABLE_SCHEMA` = :database_name AND `table_name` LIKE :likeString", [":likeString" => $like_string, ":database_name" => $database]);
       $results = $query->fetchCol('table_name');
       foreach ($results as $table_name) {
         $table_name_exploded = explode("__field_", $table_name);
@@ -76,7 +77,7 @@ class ClassicSearchPlugin extends SearchReplaceBase {
    *   False or array with matches.
    */
   private function findWords($haystack, $needle) {
-    $regex = '/[^*]{0,300}' . preg_quote($needle) . '[^*]{0,300}/';
+    $regex = '/[^*]{0,300}' . preg_quote($needle, '/') . '[^*]{0,300}/';
 
     if (preg_match($regex, $haystack, $matches)) {
       return $matches[0];

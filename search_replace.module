@@ -14,6 +14,8 @@
  */
 function batch_search_replace($data, $operation_details, &$context) {
 
+  $search_service = \Drupal::service('search_replace.search.string');
+
   foreach ($data['table'] as $item) {
     $entity_data = explode("::", $item);
     $entity_type = $entity_data[1];
@@ -21,17 +23,8 @@ function batch_search_replace($data, $operation_details, &$context) {
     $entity_field = $entity_data[2];
     $entity_lang = $entity_data[3];
 
-    $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($entity_id);
-    if ($entity->hasTranslation($entity_lang)) {
-      $entity = $entity->getTranslation($entity_lang);
-    }
-    if (!empty($entity)) {
-      $fieldValue = $entity->get($entity_field)->value;
-      $fieldValue = str_replace($data['search_string'], $data['replace'], $fieldValue);
-      $entity->set($entity_field, $fieldValue);
-      $entity->save();
-      $context['results'][] = $entity_id;
-    }
+    $search_service->doTheReplace($entity_type, $entity_id, $entity_field, $entity_lang, $data['search_string'], $data['replace']);
+    $context['results'][] = $entity_id;
   }
 
   // Optional message displayed under the progressbar.

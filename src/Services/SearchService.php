@@ -186,4 +186,39 @@ class SearchService {
     return ['flag' => $flag, 'entity' => $entity];
   }
 
+  /**
+   * Do the replace of string in an entity.
+   *
+   * @param $entity_type
+   * @param $entity_id
+   * @param $entity_field
+   * @param $entity_lang
+   * @param $search_string
+   * @param $replace
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+  public function doTheReplace($entity_type, $entity_id, $entity_field, $entity_lang, $search_string, $replace) {
+    $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($entity_id);
+    if ($entity->hasTranslation($entity_lang)) {
+      $entity = $entity->getTranslation($entity_lang);
+    }
+    if (!empty($entity)) {
+      $fieldValue = $entity->get($entity_field)->value;
+      $fieldValue = str_replace($search_string, $replace, $fieldValue);
+      $format = $entity->{$entity_field}->format;
+      if (!empty($format)) {
+        $entity->{$entity_field} = [
+          'format' => $entity->{$entity_field}->format,
+          'value' => $fieldValue,
+        ];
+      }
+      else {
+        $entity->set($entity_field, $fieldValue);
+      }
+      $entity->save();
+    }
+  }
+
 }
