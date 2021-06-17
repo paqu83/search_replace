@@ -23,13 +23,14 @@ class ClassicSearchPlugin extends SearchReplaceBase {
    */
   public function searchInDb(string $search_string) {
     $entities_data = [];
+    $connection = $this->database;
+    $like_string = '%__field_%';
+    $database = $connection->getConnectionOptions()["database"]; //TABLE_SCHEMA
+    $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `TABLE_SCHEMA` = :database_name AND `table_name` LIKE :likeString", [":likeString" => $like_string, ":database_name" => $database]);
+    $results = $query->fetchCol('table_name');
+
     foreach ($this->languageManager->getLanguages() as $language) {
       $lang_code = $language->getId();
-      $connection = $this->database;
-      $like_string = '%__field_%';
-      $database = $connection->getConnectionOptions()["database"]; //TABLE_SCHEMA
-      $query = $connection->query("SELECT `table_name` FROM information_schema.tables WHERE `TABLE_SCHEMA` = :database_name AND `table_name` LIKE :likeString", [":likeString" => $like_string, ":database_name" => $database]);
-      $results = $query->fetchCol('table_name');
       foreach ($results as $table_name) {
         $table_name_exploded = explode("__field_", $table_name);
         try {
@@ -38,25 +39,28 @@ class ClassicSearchPlugin extends SearchReplaceBase {
         catch (PluginNotFoundException $exception) {
           continue;
         }
-        $field_name = explode("__", $table_name);
-        $field_name = end($field_name);
-        $field_name .= "_value";
-        $field_exists = $connection->query("SHOW COLUMNS FROM $table_name LIKE :fieldName", [":fieldName" => $field_name])->fetchAssoc();
-        if (!empty($field_exists)) {
-          $sql = "SELECT `entity_id`, `$field_name` AS `field_content`, `langcode` " .
-            "FROM  $table_name WHERE $field_name LIKE :search_string AND `langcode` = :langcode AND `deleted`=0";
-          $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%', ':langcode' => $lang_code])->fetchAll();
-          if (!empty($found)) {
-            foreach ($found as $found_item) {
-              $field_body = $found_item->field_content;
+        $field_name_pre = explode("__", $table_name);
+        $field_name_pre = end($field_name_pre);
+        $possible_field_name_endings = ['_value', '_uri'];
+        foreach ($possible_field_name_endings as $ending) {
+          $field_name = $field_name_pre . $ending;
+          $field_exists = $connection->query("SHOW COLUMNS FROM $table_name LIKE :fieldName", [":fieldName" => $field_name])->fetchAssoc();
+          if (!empty($field_exists)) {
+            $sql = "SELECT `entity_id`, `$field_name` AS `field_content`, `langcode` " .
+              "FROM  $table_name WHERE $field_name LIKE :search_string AND `langcode` = :langcode AND `deleted`=0";
+            $found = $connection->query($sql, [":search_string" => '%' . $search_string . '%', ':langcode' => $lang_code])->fetchAll();
+            if (!empty($found)) {
+              foreach ($found as $found_item) {
+                $field_body = $found_item->field_content;
 
-              $entities_data[] = [
-                'entity_id' => $found_item->entity_id,
-                'field_name' => str_replace('_value', '', $field_name),
-                'type' => $storage->getEntityTypeId(),
-                'big_picture' => $this->findWords($field_body, $search_string),
-                'langcode' => $found_item->langcode,
-              ];
+                $entities_data[] = [
+                  'entity_id' => $found_item->entity_id,
+                  'field_name' => str_replace($possible_field_name_endings, '', $field_name),
+                  'type' => $storage->getEntityTypeId(),
+                  'big_picture' => $this->findWords($field_body, $search_string),
+                  'langcode' => $found_item->langcode,
+                ];
+              }
             }
           }
         }
