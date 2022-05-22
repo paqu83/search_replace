@@ -1,0 +1,5 @@
+name: search_replace
+type: module
+description: Search and replace string in a content entities
+core_version_requirement: ^8.8 || ^9
+package: Custom

@@ -1,0 +1,15 @@
+{
+    "name": "pega/search_replace",
+    "description": "Search and replace string in a content entities",
+    "type": "drupal-custom-module",
+    "vendor": "pega",
+    "support": {
+        "source": "https://gitlab.com/pegadigital/pm/search_replace"
+    },
+    "authors": [
+        {
+            "name": "Piotr Pakulski",
+            "role": "Maintainer"
+        }
+    ]
+}
