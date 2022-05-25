@@ -189,3 +189,5 @@ class SearchReplaceForm extends FormBase {
       $form_state->setErrorByName('search_string', $this->t('The string you are searching is too short. Min. 3 characters.'));
     }
   }
+  
+}
