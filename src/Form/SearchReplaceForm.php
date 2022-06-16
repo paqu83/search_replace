@@ -189,5 +189,195 @@ class SearchReplaceForm extends FormBase {
       $form_state->setErrorByName('search_string', $this->t('The string you are searching is too short. Min. 3 characters.'));
     }
   }
+  /**
+   * Handle page 1 submit.
+   *
+   * @param array $form
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
+   */
+  public function formPage1Submit(array &$form, FormStateInterface $form_state) {
+    $form_state
+      ->set('table', $form_state->getValue('table'))
+      ->set('page_num', 2)
+      ->setRebuild(TRUE);
+  }
+
+  /**
+   * Handle page 2 submit.
+   *
+   * @param array $form
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
+   */
+  public function formPage2Submit(array &$form, FormStateInterface $form_state) {
+    $form_state
+      ->set('table', $form_state->getValue('table'))
+      ->set('replace_by', $form_state->getValue('replace_by'))
+      ->set('filters', $form_state->getValue('filters'))
+      ->set('page_num', 3)
+      ->setRebuild(TRUE);
+  }
+
+  /**
+   * Handle page 3 submit.
+   *
+   * @param array $form
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
+   */
+  public function formPage3Submit(array &$form, FormStateInterface $form_state) {
+    $table = $form_state->getValue('table');
+    $itemsToProcess = [];
+    foreach ($table as $item) {
+      if (!empty($item)) {
+        $itemsToProcess[] = $item;
+      }
+    }
+    $itemsToProcess = array_chunk($itemsToProcess, 10, TRUE);
+
+    $operations = [];
+    foreach ($itemsToProcess as $i => $table) {
+      $operations[] = [
+        'batch_search_replace',
+        [
+          [
+            'table' => $table,
+            'search_string' => $form_state->getValue('search_string'),
+            'replace' => $form_state->getValue('replace_by'),
+          ],
+          $this->t('(Operation @operation)', ['@operation' => $i]),
+        ],
+      ];
+    }
+    $batch = [
+      'title' => $this->t('Working hard on @num operations', ['@num' => count($itemsToProcess)]),
+      'operations' => $operations,
+      'finished' => 'batch_search_replace_finished',
+    ];
+    batch_set($batch);
+  }
+
+  /**
+   * Prepare form for page 2.
+   *
+   * @param array $form
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
+   */
+  public function formPage2(array &$form, FormStateInterface $form_state) {
+    $filters = $form_state->getValue('filters');
+    $form['description'] = [
+      '#type' => 'item',
+      '#title' => $this->t('Replace string: @search_string', ['@search_string' => $filters['search_string']]),
+    ];
+
+    $form['replace_by'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Replace by string'),
+      '#required' => TRUE,
+    ];
+    $form['table'] = [
+      '#type' => 'hidden',
+      '#value' => $form_state->getValue('table'),
+    ];
+    $form['search_string'] = [
+      '#type' => 'hidden',
+      '#value' => $filters['search_string'],
+    ];
+    $form['back'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Back'),
+      '#submit' => ['::formPage2Back'],
+      '#limit_validation_errors' => [],
+    ];
+    $form['submit'] = [
+      '#type' => 'submit',
+      '#button_type' => 'primary',
+      '#value' => $this->t('Submit'),
+      '#submit' => ['::formPage2Submit'],
+    ];
+
+    return $form;
+  }
+
+  /**
+   * Prepare form for page 3.
+   *
+   * @param array $form
+   *   Form instance.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state data.
+   */
+  public function formPage3(array &$form, FormStateInterface $form_state) {
+
+    $form['description'] = [
+      '#type' => 'item',
+      '#title' => $this->t('Are you sure, you want to replace string: %search_string for: %replace_by ?', ['%search_string' => $form_state->getValue('search_string'), '%replace_by' => $form_state->getValue('replace_by')]),
+    ];
+    $form['table'] = [
+      '#type' => 'hidden',
+      '#value' => $form_state->getValue('table'),
+    ];
+    $form['replace_by'] = [
+      '#type' => 'hidden',
+      '#value' => $form_state->getValue('replace_by'),
+    ];
+    $form['search_string'] = [
+      '#type' => 'hidden',
+      '#value' => $form_state->getValue('search_string'),
+    ];
+
+    $form['back'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Back'),
+      '#submit' => ['::formPage2Back'],
+      '#limit_validation_errors' => [],
+    ];
+    $form['submit'] = [
+      '#type' => 'submit',
+      '#button_type' => 'primary',
+      '#value' => $this->t('Yes I am sure.'),
+      '#submit' => ['::formPage3Submit'],
+    ];
+
+    return $form;
+  }
+
+  /**
+   * Provides custom submission handler for 'Back' button (page 2).
+   *
+   * @param array $form
+   *   An associative array containing the structure of the form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   */
+  public function formPage2Back(array &$form, FormStateInterface $form_state) {
+    $form_state
+      ->set('page_num', 1)
+      ->setRebuild(TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $form_state
+      ->set('filters', $form_state->getValue('filters'))
+      ->setRebuild(TRUE);
+  }
+
+  /**
+   * Clears the form inputs by unsetting the stored values.
+   */
+  public function resetForm(array &$form, FormStateInterface $form_state) {
+    $form_state
+      ->set('filters', NULL)
+      ->setRebuild(TRUE);
+  }
   
 }
